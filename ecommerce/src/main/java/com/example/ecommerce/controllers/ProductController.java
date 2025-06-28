@@ -1,6 +1,7 @@
 package com.example.ecommerce.controllers;
 
-import com.example.ecommerce.models.*;
+import com.example.ecommerce.models.Category;
+import com.example.ecommerce.models.Product;
 import com.example.ecommerce.security.services.CategoryService;
 import com.example.ecommerce.security.services.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -8,11 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.MediaType;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,7 +24,7 @@ public class ProductController {
 
     // ADD PRODUCT
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping(value = "/addproduct", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/addproduct", consumes = "multipart/form-data")
     public ProductDto add(@RequestParam("name") String name,
                           @RequestParam(value = "description", required = false) String description,
                           @RequestParam("brand") String brand,
@@ -47,7 +44,7 @@ public class ProductController {
         return toDto(productService.addProduct(product, image));
     }
 
-    // LIST ALL
+    // LIST ALL PRODUCTS
     @GetMapping("/getproducts")
     public List<ProductDto> all() {
         return productService.getAll().stream().map(this::toDto).collect(Collectors.toList());
@@ -73,7 +70,7 @@ public class ProductController {
 
     // UPDATE PRODUCT
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping(value = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/update", consumes = "multipart/form-data")
     public ProductDto updateByName(@RequestParam("name") String currentName,
                                    @RequestParam("newName") String newName,
                                    @RequestParam(value = "description", required = false) String description,
@@ -93,18 +90,18 @@ public class ProductController {
         return toDto(productService.updateByName(currentName, changes, image));
     }
 
-   // DELETE by name
+    // DELETE
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteByName(@RequestParam("name") String name) {
         productService.deleteByName(name);
-        return ResponseEntity.ok("Deleted record with name " + name);
+        return ResponseEntity.ok("Deleted product with name " + name);
     }
 
     // PATCH IMAGE
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping(value = "/update/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ProductDto updateImageByName(@RequestParam("name") String name, 
+    @PatchMapping(value = "/update/image", consumes = "multipart/form-data")
+    public ProductDto updateImageByName(@RequestParam("name") String name,
                                         @RequestPart("image") MultipartFile image) {
         return toDto(productService.updateImageByName(name, image));
     }
@@ -140,47 +137,19 @@ public class ProductController {
         return toDto(productService.updateFieldByName(name, "category", cat));
     }
 
-    // IMAGE RESOURCE
-    @GetMapping("/image/{filename:.+}")
-    public ResponseEntity<byte[]> getImage(@PathVariable String filename) {
-        try {
-            Path imagePath = Path.of("uploads").resolve(filename).normalize();
-            if (!Files.exists(imagePath)) {
-                return ResponseEntity.notFound().build();
-            }
-
-            byte[] imageBytes = Files.readAllBytes(imagePath);
-            String contentType = Files.probeContentType(imagePath);
-            if (contentType == null) {
-                contentType = "application/octet-stream";
-            }
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .body(imageBytes);
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    // DTO MAPPER
+    // DTO Mapper
     private ProductDto toDto(Product p) {
-        String imageUrl = p.getImageFilename() == null ? null :
-            ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/api/v1/products/image/")
-                .path(p.getImageFilename())
-                .toUriString();
-
         return new ProductDto(
-            p.getId(),
-            p.getName(),
-            p.getDescription(),
-            p.getPrice(),
-            p.getBrand(),
-            p.getCategory().getName(),
-            imageUrl
+                p.getId(),
+                p.getName(),
+                p.getDescription(),
+                p.getPrice(),
+                p.getBrand(),
+                p.getCategory().getName(),
+                p.getImageFilename() // Cloudinary URL
         );
     }
 
-    record ProductDto(Long id, String name, String description, BigDecimal price, String brand, String category, String imageUrl) {}
+    record ProductDto(Long id, String name, String description, BigDecimal price, String brand, String category, String imageUrl) {
+    }
 }
