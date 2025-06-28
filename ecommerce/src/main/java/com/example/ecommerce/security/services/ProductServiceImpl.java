@@ -1,5 +1,7 @@
 package com.example.ecommerce.security.services;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.example.ecommerce.models.Product;
 import com.example.ecommerce.repositories.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -7,16 +9,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository repo;
-    private final String IMAGE_DIR = "uploads";
+    private final Cloudinary cloudinary;
 
     @Override
     public Product addProduct(Product product, MultipartFile image) {
@@ -56,7 +57,7 @@ public class ProductServiceImpl implements ProductService {
         if (image != null && !image.isEmpty()) handleImageUpload(existing, image);
         return repo.save(existing);
     }
-    
+
     @Override
     public Product updateImageByName(String name, MultipartFile image) {
         Product p = getByExactName(name);
@@ -77,27 +78,27 @@ public class ProductServiceImpl implements ProductService {
         }
         return repo.save(p);
     }
-    
+
     @Override
     public void deleteByName(String name) {
         Product p = getByExactName(name);
         repo.delete(p);
     }
+
     @Override
     public Product getByExactName(String name) {
         return repo.findByName(name)
-            .orElseThrow(() -> new RuntimeException("Product not found with name: " + name));
+                .orElseThrow(() -> new RuntimeException("Product not found with name: " + name));
     }
 
-    // helper
+    // Upload Image to Cloudinary
     private void handleImageUpload(Product product, MultipartFile image) {
         if (image == null || image.isEmpty()) return;
         try {
-            Files.createDirectories(Path.of(IMAGE_DIR));
-            String filename = System.currentTimeMillis() + "_" + image.getOriginalFilename();
-            Path target = Path.of(IMAGE_DIR).resolve(filename);
-            Files.write(target, image.getBytes());
-            product.setImageFilename(filename);
+            Map uploadResult = cloudinary.uploader().upload(image.getBytes(),
+                    ObjectUtils.asMap("folder", "ecommerce_products"));
+            String url = (String) uploadResult.get("secure_url");
+            product.setImageFilename(url);
         } catch (IOException e) {
             throw new RuntimeException("Image upload failed", e);
         }
