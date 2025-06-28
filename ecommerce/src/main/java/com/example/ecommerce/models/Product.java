@@ -2,11 +2,16 @@ package com.example.ecommerce.models;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "products")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Product {
 
     @Id
@@ -20,10 +25,10 @@ public class Product {
 
     private BigDecimal price;
 
-    
     private String brand;
 
-    private String imageFilename;
+    @Column(length = 500)
+    private String imageFilename; // Cloudinary URL
 
     @ManyToOne
     @JoinColumn(name = "category_id")
