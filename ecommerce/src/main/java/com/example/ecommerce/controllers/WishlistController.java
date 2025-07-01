@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.util.Set;
@@ -21,6 +20,7 @@ public class WishlistController {
 
     private final WishlistService wishlistService;
 
+    // ✅ Get the currently logged-in user's ID
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
@@ -31,18 +31,21 @@ public class WishlistController {
         return userDetails.getId();
     }
 
+    // ✅ Add product to wishlist
     @PostMapping("/add/{productId}")
     public ResponseEntity<String> addToWishlist(@PathVariable Long productId) {
         wishlistService.addToWishlist(getCurrentUserId(), productId);
         return ResponseEntity.ok("Product added to wishlist.");
     }
 
+    // ✅ Remove product from wishlist
     @DeleteMapping("/remove/{productId}")
     public ResponseEntity<String> removeFromWishlist(@PathVariable Long productId) {
         wishlistService.removeFromWishlist(getCurrentUserId(), productId);
         return ResponseEntity.ok("Product removed from wishlist.");
     }
 
+    // ✅ Get all wishlist products for the current user
     @GetMapping("/list")
     public ResponseEntity<Set<ProductDto>> getWishlist() {
         Set<Product> products = wishlistService.getWishlistProducts(getCurrentUserId());
@@ -52,13 +55,8 @@ public class WishlistController {
         return ResponseEntity.ok(dtos);
     }
 
+    // ✅ Convert Product to ProductDto
     private ProductDto toDto(Product p) {
-        String imageUrl = p.getImageFilename() == null ? null :
-                ServletUriComponentsBuilder.fromCurrentContextPath()
-                        .path("/api/v1/products/image/")
-                        .path(p.getImageFilename())
-                        .toUriString();
-
         return new ProductDto(
                 p.getId(),
                 p.getName(),
@@ -66,10 +64,11 @@ public class WishlistController {
                 p.getPrice(),
                 p.getBrand(),
                 p.getCategory().getName(),
-                imageUrl
+                p.getImageFilename() // ✅ Direct Cloudinary URL or saved image URL
         );
     }
 
+    // ✅ DTO record class for Wishlist Products
     public record ProductDto(
             Long id,
             String name,
